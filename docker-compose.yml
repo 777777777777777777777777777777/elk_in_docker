@@ -1,0 +1,46 @@
+version: '2.2'
+services:
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:6.7.0
+    ports:
+      - 192.168.0.1:1111:5044
+#------ ^ Your ip address
+    environment:
+      SERVER_NAME: logstash.local
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - /var/log/jun.log:/var/log
+      - ./GeoLite2_City.mmdb:/usr/share/logstash/GeoLite2_City.mmdb
+######## ^ GeoLite2 data created by MaxMind, available from https://www.maxmind.com 
+      - ./elasticsearch-template-es6x.json:/usr/share/logstash/vendor/bundle/jruby/2.5.0/gems/logstash-output-elasticsearch-9.4.0-java/lib/logstash/outputs/elasticsearch/elasticsearch-template-es6x.json
+    networks:
+      - esnet
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.7.0
+    ports:
+      - 192.168.0.1:3333:5601
+    networks:
+      - esnet
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.7.0
+    ports:
+      - 192.168.0.1:2222:9200
+      - 192.168.0.1:2223:9300
+    environment:
+      - discovery.type=single-node
+      - cluster.name=docker-
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+     - /dataes:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - esnet
+networks:
+  esnet:
